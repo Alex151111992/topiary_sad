@@ -1,0 +1,4 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^api/auth/.*$ vk-auth.php [L,QSA]
+</IfModule>
