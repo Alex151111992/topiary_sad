@@ -6,10 +6,10 @@ import { createSiteServer } from './server.mjs';
 const callbackPath = '/api/auth/vk/callback';
 const config = { clientId: '12345', redirectUri: `https://shop.example.test${callbackPath}` };
 
-function site(t, { configured = true, exchangeResponse } = {}) {
+function site(t, { configured = true, exchangeResponse, settings = config } = {}) {
   const exchanges = [];
   let time = Date.now();
-  const server = createSiteServer(configured ? config : {}, {
+  const server = createSiteServer(configured ? settings : {}, {
     now: () => time,
     fetchVk: async (url, options) => {
       exchanges.push({ url, options });
@@ -24,9 +24,9 @@ function site(t, { configured = true, exchangeResponse } = {}) {
   });
   t.after(() => server.close());
 
-  function get(path, cookie) {
+  function get(path, cookie, host = new URL(settings.redirectUri).host) {
     return new Promise(resolve => {
-      const request = { url: path, method: 'GET', headers: { cookie } };
+      const request = { url: path, method: 'GET', headers: { cookie, host } };
       const headers = new Headers();
       let status = 200;
       const response = {
@@ -54,7 +54,7 @@ function site(t, { configured = true, exchangeResponse } = {}) {
 
   function callback(attempt, params = { code: 'test-code', device_id: 'test-device' }, cookie = attempt.cookie) {
     const query = new URLSearchParams({ state: attempt.state, ...params });
-    return get(`${callbackPath}?${query}`, cookie);
+    return get(`${new URL(settings.redirectUri).pathname}?${query}`, cookie);
   }
 
   return { get, start, callback, exchanges, tick: milliseconds => { time += milliseconds; } };
@@ -120,6 +120,41 @@ test('обмен кода VK ID создаёт отдельную сессию, 
   assert.equal((await (await app.get('/api/auth/session')).json()).authenticated, false);
   app.tick(3600000);
   assert.equal((await (await app.get('/api/auth/session', sessionCookie)).json()).authenticated, false);
+});
+
+test('зарегистрированный адрес /auth/vkid обменивает код и создаёт сессию', async t => {
+  const settings = { clientId: '54889426', redirectUri: 'https://www.topiary-sad.ru/auth/vkid' };
+  const app = site(t, { settings });
+  const attempt = await app.start();
+  assert.equal(attempt.authorization.searchParams.get('client_id'), settings.clientId);
+  assert.equal(attempt.authorization.searchParams.get('redirect_uri'), settings.redirectUri);
+  assert.equal((await app.callback({ ...attempt, state: 'wrong' })).headers.get('location'), '/?login=error#login');
+  assert.equal((await app.callback(attempt, undefined, '')).headers.get('location'), '/?login=error#login');
+
+  const response = await app.callback(attempt);
+  assert.equal(response.headers.get('location'), '/#login');
+  assert.equal(app.exchanges[0].url.searchParams.get('redirect_uri'), settings.redirectUri);
+  const cookie = response.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await app.get('/api/auth/session', cookie)).json()).authenticated, true);
+  assert.equal((await app.callback(attempt)).headers.get('location'), '/?login=error#login');
+  assert.equal(app.exchanges.length, 1);
+  assert.equal((await app.get(`${callbackPath}?state=${attempt.state}`, attempt.cookie)).status, 404);
+});
+
+test('вход с другого домена переходит на www до создания cookie попытки', async t => {
+  const settings = { clientId: '54889426', redirectUri: 'https://www.topiary-sad.ru/auth/vkid' };
+  const app = site(t, { settings });
+  const response = await app.get('/api/auth/vk/start', undefined, 'topiary-sad.ru');
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get('location'), 'https://www.topiary-sad.ru/api/auth/vk/start');
+  assert.equal(response.headers.get('set-cookie'), null);
+  assert.equal(app.exchanges.length, 0);
+  assert.equal((await app.start()).authorization.origin, 'https://id.vk.ru');
+
+  const foreign = await app.get('/?next=https://foreign.example/', undefined, 'foreign.example');
+  assert.equal(new URL(foreign.headers.get('location')).origin, 'https://www.topiary-sad.ru');
+  const missing = await app.get('/', undefined, '');
+  assert.equal(missing.headers.get('location'), 'https://www.topiary-sad.ru/');
 });
 
 test('callback без правильного state или cookie отклоняется', async t => {
@@ -204,4 +239,5 @@ test('неполная конфигурация и небезопасный вн
   assert.throws(() => createSiteServer({ clientId: config.clientId }), /VK_REDIRECT_URI/);
   assert.throws(() => createSiteServer({ ...config, redirectUri: `http://shop.example.test${callbackPath}` }), /HTTPS/);
   assert.throws(() => createSiteServer({ ...config, redirectUri: `${config.redirectUri}?query=value` }), /VK_REDIRECT_URI/);
+  assert.throws(() => createSiteServer({ ...config, redirectUri: 'https://shop.example.test/unknown' }), /VK_REDIRECT_URI/);
 });

@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 
 const VK_ORIGIN = 'https://id.vk.ru';
-const CALLBACK_PATH = '/api/auth/vk/callback';
+const CALLBACK_PATHS = new Set(['/api/auth/vk/callback', '/auth/vkid']);
 const ATTEMPT_SECONDS = 600;
 const SESSION_SECONDS = 3600;
 const STORE_LIMIT = 2048;
@@ -26,10 +26,17 @@ function readVkConfig(clientId, redirectUri) {
   const callback = new URL(redirectUri);
   const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(callback.hostname);
   const validScheme = callback.protocol === 'https:' || (callback.protocol === 'http:' && loopback);
-  if (!validScheme || callback.pathname !== CALLBACK_PATH || callback.username || callback.password || /[?#]/.test(redirectUri)) {
-    throw new Error(`VK_REDIRECT_URI должен вести на ${CALLBACK_PATH} по HTTPS. HTTP допустим только для локального адреса.`);
+  if (!validScheme || !CALLBACK_PATHS.has(callback.pathname) || callback.username || callback.password || /[?#]/.test(redirectUri)) {
+    throw new Error('VK_REDIRECT_URI должен вести на /auth/vkid или /api/auth/vk/callback по HTTPS. HTTP допустим только для локального адреса.');
   }
-  return { clientId, redirectUri, secure: callback.protocol === 'https:' };
+  return {
+    clientId,
+    redirectUri,
+    callbackPath: callback.pathname,
+    origin: callback.origin,
+    host: callback.host,
+    secure: callback.protocol === 'https:',
+  };
 }
 
 function randomId() {
@@ -166,6 +173,18 @@ export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fet
       const url = new URL(request.url, 'http://site.invalid');
       if (url.origin !== 'http://site.invalid') return response.writeHead(400).end();
 
+      if (vk && request.headers.host?.toLowerCase() !== vk.host) {
+        const canonical = new URL(vk.origin);
+        canonical.pathname = url.pathname;
+        canonical.search = url.search;
+        return redirect(response, canonical.href);
+      }
+
+      if (CALLBACK_PATHS.has(url.pathname)) {
+        if (vk && url.pathname !== vk.callbackPath) return response.writeHead(404).end();
+        return await finishVk(request, response, url.searchParams);
+      }
+
       switch (url.pathname) {
         case '/api/auth/session': {
           const session = sessions.get(readCookie(request, sessionCookie));
@@ -175,8 +194,6 @@ export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fet
         }
         case '/api/auth/vk/start':
           return startVk(request, response);
-        case CALLBACK_PATH:
-          return await finishVk(request, response, url.searchParams);
         default: {
           const asset = assets.get(url.pathname);
           if (!asset) return response.writeHead(404).end();
