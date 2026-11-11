@@ -10,7 +10,9 @@
 </head>
 <body>
 
-  <header>
+  <header <button data-login-provider="vk">Войти через VK</button>
+<span id="login-status"></span>
+>
     <div class="logo">Топиарий Сад</div>
     <div class="cart-widget">
       <span class="cart-count">0</span> шт. | <span class="cart-total">0 ₽</span>
@@ -160,6 +162,7 @@
   </script>
 
   <!-- Подключение основного скрипта с логикой -->
+  <script src="vk-id/auth.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
