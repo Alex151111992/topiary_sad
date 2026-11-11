@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Топиарий Сад — садовые топиарии на заказ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">Топиарий Сад</div>
+    <div class="cart-widget">
+  <span class="cart-count">0</span>
+  <span>шт.</span>
+  <span class="cart-total">0 ₽</span>
+</div>
+<button class="burger" aria-label="Меню">☰</button>
+    <nav>
+      <ul>
+        <li><a href="#home">Главная</a></li>
+        <li><a href="#catalog">Каталог</a></li>
+        <li><a href="#about">О нас</a></li>
+        <li><a href="#contacts">Контакты</a></li>
+        <li><a href="#login">Войти</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Главный экран -->
+    <section id="home" class="hero">
+      <h1>Садовые топиарии ручной работы</h1>
+      <p>Создайте уникальный ландшафт: долговечные топиарии из натуральных и искусственных материалов.</p>
+      <br>
+      <a href="#catalog" class="btn">Перейти в каталог</a>
+    </section>
+
+    <!-- Преимущества -->
+    <section id="about">
+      <h2 class="section-title">Почему выбирают нас</h2>
+      <div class="features">
+        <div class="feature-item">
+          <h3>Ручная работа</h3>
+          <p>Каждый топиарий создаётся вручную с вниманием к деталям.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Устойчивость к погоде</h3>
+          <p>Материалы выдерживают дождь, ветер и перепады температур.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Индивидуальный заказ</h3>
+          <p>Сделаем топиарий по вашему эскизу или фото.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Каталог -->
+    <section id="catalog">
+      <h2 class="section-title">Каталог топиариев</h2>
+      <div class="products">
+        <!-- Товар 1 -->
+        <article class="product-card">
+          <img src="https://images.unsplash.com/photo-1599566150126-539c6311ad4a?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Топиарий шар зелёный" />
+          <h3>Топиарий «Шар зелёный»</h3>
+          <p>Классический шар из искусственной хвои, диаметр 60 см.</p>
+          <div class="price">12 000 ₽</div>
+          <button class="btn" onclick="alert('Товар добавлен в корзину!')">В корзину</button>
+        </article>
+
+        <!-- Товар 2 -->
+        <article class="product-card">
+          <img src="https://images.unsplash.com/photo-1610701758937-a3c17b4b8a8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Топиарий спираль" />
+          <h3>Топиарий «Спираль»</h3>
+          <p>Фигура в виде спирали из стабилизированного мха, высота 80 см.</p>
+          <div class="price">15 500 ₽</div>
+          <button class="btn" onclick="alert('Товар добавлен в корзину!')">В корзину</button>
+        </article>
+
+        <!-- Товар 3 -->
+        <article class="product-card">
+          <img src="https://images.unsplash.com/photo-1586227740560-8cf273b19c7c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Топиарий медведь" />
+          <h3>Топиарий «Медведь»</h3>
+          <p>Декоративная фигура медведя из искусственной травы, высота 90 см.</p>
+          <div class="price">18 000 ₽</div>
+          <button class="btn" onclick="alert('Товар добавлен в корзину!')">В корзину</button>
+        </article>
+      </div>
+    </section>
+
+    <section id="login" class="login" aria-labelledby="login-title">
+      <h2 id="login-title" class="section-title">Вход на сайт</h2>
+      <div class="login-providers">
+        <button class="btn login-vk" type="button" data-login-provider="vk" disabled>Войти через VK ID</button>
+      </div>
+      <p id="login-status" role="status">Для входа требуется подключение к серверу сайта.</p>
+    </section>
+
+    <!-- Форма заявки -->
+    <section id="contacts">
+      <h2 class="section-title">Заказать индивидуальный топиарий</h2>
+      <form onsubmit="event.preventDefault(); alert('Ваша заявка отправлена! Мы свяжемся с вами.');">
+        <div class="form-group">
+          <label for="name">Ваше имя</label>
+          <input type="text" id="name" name="name" required placeholder="Иван Иванов" />
+        </div>
+        <div class="form-group">
+          <label for="phone">Телефон</label>
+          <input type="tel" id="phone" name="phone" required placeholder="+7 (999) 000-00-00" />
+        </div>
+        <div class="form-group">
+          <label for="message">Описание заказа (форма, размер, стиль)</label>
+          <textarea id="message" name="message" rows="4" placeholder="Например: шар 70 см, в стиле прованс..."></textarea>
+        </div>
+        <button type="submit" class="btn">Отправить заявку</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Топиарий Сад. Все права защищены.</p>
+    <p>Адрес: г. Москва, ул. Примерная, д. 1 | Телефон: +7 (999) 123-45-67</p>
+  </footer>
+
+  <script>
+    // Простая прокрутка к якорям с плавным эффектом
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+          behavior: 'smooth'
+        });
+      });
+    });
+  </script>
+  <script src="script.js"></script>
+  <script src="auth.js" defer></script>
+</body>
+</html>

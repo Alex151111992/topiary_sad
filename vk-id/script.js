@@ -1,0 +1,114 @@
+document.addEventListener('DOMContentLoaded', () => {
+  // --- 1. Плавная прокрутка к якорям ---
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const targetId = this.getAttribute('href');
+      const targetElement = document.querySelector(targetId);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+
+  // --- 2. Мобильное меню (бургер) ---
+  const burger = document.querySelector('.burger');
+  const nav = document.querySelector('nav ul');
+  if (burger && nav) {
+    burger.addEventListener('click', () => {
+      nav.classList.toggle('active');
+      burger.classList.toggle('active');
+    });
+  }
+
+  // --- 3. Корзина (localStorage) ---
+  const cart = JSON.parse(localStorage.getItem('topiaryCart')) || [];
+
+  function updateCartUI() {
+    const cartCountEl = document.querySelector('.cart-count');
+    const cartTotalEl = document.querySelector('.cart-total');
+    if (!cartCountEl || !cartTotalEl) return;
+
+    const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
+    const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+    cartCountEl.textContent = totalCount;
+    cartTotalEl.textContent = new Intl.NumberFormat('ru-RU').format(totalPrice) + ' ₽';
+  }
+
+  function addToCart(productCard) {
+    const title = productCard.querySelector('h3').textContent;
+    const priceText = productCard.querySelector('.price').textContent;
+    // очищаем цену от пробелов и ₽, чтобы получить число
+    const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+
+    const existing = cart.find(item => item.title === title);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({ title, price, qty: 1 });
+    }
+
+    localStorage.setItem('topiaryCart', JSON.stringify(cart));
+    updateCartUI();
+
+    // визуальная обратная связь
+    const btn = productCard.querySelector('button');
+    const originalText = btn.textContent;
+    btn.textContent = 'Добавлено!';
+    btn.style.background = '#4caf50';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 2000);
+  }
+
+  document.querySelectorAll('.product-card button').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const productCard = e.target.closest('.product-card');
+      if (productCard) addToCart(productCard);
+    });
+  });
+
+  updateCartUI(); // инициализация при загрузке
+
+  // --- 4. Форма заявки (имитация отправки) ---
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const name = form.querySelector('#name').value.trim();
+      const phone = form.querySelector('#phone').value.trim();
+      const message = form.querySelector('#message').value.trim();
+
+      if (!name || !phone) {
+        alert('Пожалуйста, заполните имя и телефон.');
+        return;
+      }
+
+      // здесь можно добавить отправку на сервер
+      alert(`Спасибо, ${name}! Ваша заявка принята. Мы перезвоним на ${phone}.\nКомментарий: ${message || 'без комментария'}`);
+      form.reset();
+    });
+  }
+
+  // --- 5. Анимация появления при скролле ---
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.hero, .features, .products, form').forEach(el => {
+    observer.observe(el);
+  });
+});
