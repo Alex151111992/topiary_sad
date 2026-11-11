@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 const VK_CLIENT_ID    = '54889426';
-const VK_REDIRECT_URI = 'https://topiary-sad.ru/api/auth/vk/callback';
+const VK_REDIRECT_URI = 'https://www.topiary-sad.ru/api/auth/vk/callback';
 const VK_ORIGIN       = 'https://id.vk.ru';
 const ATTEMPT_SECONDS = 600;
 const SESSION_SECONDS = 3600;
