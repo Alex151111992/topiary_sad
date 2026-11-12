@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Топиарный Сад — садовые топиарии на заказ</title>
+  
+  <!-- Встроенные стили (чтобы сайт сразу выглядел красиво без style.css) -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+  <button data-login-provider="vk">Войти через VK</button>
+  <span id="login-status"></span>
+    <div class="logo">Топиарий Сад</div>
+    <div class="cart-widget">
+      <span class="cart-count">0</span> шт. | <span class="cart-total">0 ₽</span>
+    </div>
+    <button class="burger" aria-label="Меню">☰</button>
+    <nav>
+      <ul>
+        <li><a href="#home">Главная</a></li>
+        <li><a href="#catalog">Каталог</a></li>
+        <li><a href="#about">О нас</a></li>
+        <li><a href="#contacts">Контакты</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    
+    <!-- ========================================== -->
+    <!-- АДМИН-ПАНЕЛЬ (Скрыта, пока не включен режим) -->
+    <!-- ========================================== -->
+    <div id="edit-controls">
+      <h3>🛠 Панель администратора</h3>
+      
+      <!-- Кнопка для входа в режим редактирования главной страницы -->
+      <button id="toggle-edit-btn" class="btn-admin-primary">Редактировать страницу</button>
+      
+      <!-- Кнопка для добавления товаров -->
+      <button id="toggle-catalog-edit-btn" class="btn-admin-primary" style="margin-left: 10px;">Добавить/редактировать товары</button>
+
+      <!-- Форма редактирования текста главной страницы (скрыта внутри) -->
+      <div id="page-edit-form" style="display:none; margin-top: 1rem; padding: 1rem; border: 1px dashed #ccc; background: #fafafa;">
+        <label>Заголовок главного экрана:</label>
+        <input type="text" id="title-input" style="width: 100%; box-sizing: border-box;">
+        
+        <label style="margin-top: 10px;">Описание:</label>
+        <textarea id="intro-input" rows="3" style="width: 100%; box-sizing: border-box;"></textarea>
+        
+        <div class="form-actions">
+          <button id="save-page-btn">Сохранить</button>
+          <button id="cancel-page-edit-btn">Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ГЛАВНЫЙ ЭКРАН (HOME) -->
+    <!-- ========================================== -->
+    <section id="home" class="hero">
+      <h1 id="page-title">Садовые топиарии ручной работы</h1>
+      <p id="page-intro">Создайте уникальный ландшафт: долговечные топиарии из натуральных и искусственных материалов.</p>
+      <br>
+      <a href="#catalog" class="btn btn-admin-primary">Перейти в каталог</a>
+    </section>
+
+    <!-- Преимущества -->
+    <section id="about">
+      <h2 class="section-title">Почему выбирают нас</h2>
+      <div class="features" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <div class="feature-item" style="background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+          <h3>Ручная работа</h3>
+          <p>Каждый топиарий создаётся вручную с вниманием к деталям.</p>
+        </div>
+        <div class="feature-item" style="background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+          <h3>Устойчивость к погоде</h3>
+          <p>Материалы выдерживают дождь, ветер и перепады температур.</p>
+        </div>
+        <div class="feature-item" style="background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+          <h3>Индивидуальный заказ</h3>
+          <p>Сделаем топиарий по вашему эскизу или фото.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- КАТАЛОГ ТОВАРОВ -->
+    <!-- ВАЖНО: Здесь НЕ должно быть товаров! Они подгрузятся через JS -->
+    <!-- ========================================== -->
+    <section id="catalog">
+      <h2 class="section-title">Каталог топиарных изделий</h2>
+      <div id="catalog-grid">
+        <!-- Сюда JavaScript вставит карточки товаров -->
+        <p style="grid-column: 1/-1; text-align:center; color:#777;">Загрузка каталога...</p>
+      </div>
+    </section>
+
+    <!-- Форма заявки -->
+    <section id="contacts">
+      <h2 class="section-title">Заказать индивидуальный топиарий</h2>
+      <form onsubmit="event.preventDefault(); alert('Ваша заявка отправлена! Мы свяжемся с вами.');" style="max-width: 500px;">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="name">Ваше имя</label>
+          <input type="text" id="name" name="name" required placeholder="Иван Иванов" style="width:100%; padding:8px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="phone">Телефон</label>
+          <input type="tel" id="phone" name="phone" required placeholder="+7 (920) 013-23-88" style="width:100%; padding:8px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="message">Описание заказа</label>
+          <textarea id="message" name="message" rows="4" placeholder="Например: шар 70 см, в стиле прованс..." style="width:100%; padding:8px;"></textarea>
+        </div>
+        <button type="submit" class="btn btn-admin-primary">Отправить заявку</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Топиарий Сад. Все права защищены.</p>
+    <p>Адрес: Нижегородская область, д. Малая Ельня, ул. Переулок полевой | Телефон: +7 (920) 013-23-88</p>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО ДЛЯ РЕДАКТИРОВАНИЯ ТОВАРА -->
+  <!-- (Всплывающее окно, стили уже есть в <style>) -->
+  <!-- ========================================== -->
+  <div id="product-edit-form">
+    <h3 id="edit-form-title">Добавить товар</h3>
+    <input type="hidden" id="product-id">
+
+    <label>Название:</label>
+    <input type="text" id="product-name" required>
+
+    <label style="margin-top: 10px;">Описание:</label>
+    <textarea id="product-desc" rows="3"></textarea>
+
+    <label style="margin-top: 10px;">Цена (₽):</label>
+    <input type="number" id="product-price" required>
+
+    <label style="margin-top: 10px;">Фото (URL картинки):</label>
+    <input type="url" id="product-image" placeholder="https://...">
+
+    <div class="form-actions">
+      <button id="save-product-btn" class="btn-admin-primary">Сохранить</button>
+      <button id="cancel-product-edit-btn" class="btn-admin-secondary">Отмена</button>
+    </div>
+  </div>
+
+  <!-- Плавная прокрутка для якорей -->
+  <script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  </script>
+
+  <!-- Подключение основного скрипта с логикой -->
+  <script src="vk-id/auth.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
