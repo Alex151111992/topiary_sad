@@ -2,12 +2,15 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
+import { defaultAccountFile, normalizeEmail, openAccounts, validPassword } from './accounts.mjs';
 
 const VK_ORIGIN = 'https://id.vk.ru';
 const CALLBACK_PATHS = new Set(['/api/auth/vk/callback', '/auth/vkid']);
 const ATTEMPT_SECONDS = 600;
 const SESSION_SECONDS = 3600;
 const STORE_LIMIT = 2048;
+const RATE_SECONDS = 900;
+const POST_PATHS = new Set(['/api/auth/register', '/api/auth/login', '/api/auth/logout']);
 
 const assets = new Map([
   ['/', ['index.html', 'text/html']],
@@ -63,21 +66,130 @@ function singleParam(params, key) {
   return values.length === 1 ? values[0] : null;
 }
 
-export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fetch, now = Date.now } = {}) {
+export function createSiteServer({ clientId, redirectUri, siteOrigin, accountFile = ':memory:' } = {}, { fetchVk = fetch, now = Date.now } = {}) {
   const vk = readVkConfig(clientId, redirectUri);
-  const prefix = vk?.secure ? '__Host-' : '';
+  const origin = siteOrigin ? new URL(siteOrigin) : vk ? new URL(vk.origin) : null;
+  if (origin && ((siteOrigin && origin.origin !== siteOrigin) || origin.pathname !== '/' || origin.search || origin.hash ||
+      origin.username || origin.password || (origin.protocol !== 'https:' &&
+      !(origin.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname))))) {
+    throw new Error('SITE_ORIGIN должен быть HTTPS-адресом сайта без пути. Для localhost допустим HTTP.');
+  }
+  if (vk && origin.origin !== vk.origin) throw new Error('SITE_ORIGIN должен совпадать с доменом VK_REDIRECT_URI.');
+  const secure = origin?.protocol === 'https:';
+  const accounts = openAccounts(accountFile);
+  const prefix = secure ? '__Host-' : '';
   const attemptCookie = `${prefix}topiary_vk_attempt`;
   const sessionCookie = `${prefix}topiary_session`;
   const attempts = new Map();
   const sessions = new Map();
+  const rates = new Map();
 
   function pruneExpired() {
     const time = now();
-    for (const store of [attempts, sessions]) {
+    for (const store of [attempts, sessions, rates]) {
       for (const [key, item] of store) {
         if (item.expiresAt <= time) store.delete(key);
       }
     }
+  }
+
+  function json(response, status, value) {
+    return response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }).end(JSON.stringify(value));
+  }
+
+  function issueSession(request, response, identity) {
+    pruneExpired();
+    sessions.delete(readCookie(request, sessionCookie));
+    if (sessions.size >= STORE_LIMIT) return false;
+    const id = randomId();
+    sessions.set(id, { ...identity, expiresAt: now() + SESSION_SECONDS * 1000 });
+    writeCookie(response, sessionCookie, id, SESSION_SECONDS, secure);
+    return true;
+  }
+
+  function sameOrigin(request) {
+    const fetchSite = request.headers['sec-fetch-site'];
+    if (fetchSite && !['same-origin', 'none'].includes(fetchSite)) return false;
+    let expected = origin?.origin;
+    if (!expected) {
+      // An unconfigured installation accepts only loopback hosts, never an arbitrary Host header.
+      try {
+        const local = new URL(`http://${request.headers.host}`);
+        if (!['localhost', '127.0.0.1', '[::1]'].includes(local.hostname) || local.host !== request.headers.host) return false;
+        expected = local.origin;
+      } catch { return false; }
+    }
+    return request.headers.origin === expected && request.headers.host?.toLowerCase() === new URL(expected).host;
+  }
+
+  function consumeRate(key, limit) {
+    pruneExpired();
+    let rate = rates.get(key);
+    if (!rate) {
+      if (rates.size >= STORE_LIMIT * 2) return false;
+      rate = { count: 0, expiresAt: now() + RATE_SECONDS * 1000 };
+      rates.set(key, rate);
+    }
+    return ++rate.count <= limit;
+  }
+
+  async function readJson(request) {
+    if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers['content-type'] ?? '')) {
+      throw Object.assign(new Error('Нужен JSON-запрос.'), { status: 415 });
+    }
+    if (Number(request.headers['content-length'] ?? 0) > 4096) {
+      throw Object.assign(new Error('Слишком большой запрос.'), { status: 413 });
+    }
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of request) {
+      size += chunk.length;
+      if (size > 4096) throw Object.assign(new Error('Слишком большой запрос.'), { status: 413 });
+      chunks.push(chunk);
+    }
+    let body;
+    try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+    catch { throw Object.assign(new Error('Не удалось прочитать запрос.'), { status: 400 }); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw Object.assign(new Error('Некорректные данные формы.'), { status: 400 });
+    }
+    return body;
+  }
+
+  async function passwordAction(request, response, path) {
+    if (!sameOrigin(request)) return json(response, 403, { error: 'Обновите страницу и попробуйте снова.' });
+    const body = await readJson(request);
+    if (path === '/api/auth/logout') {
+      sessions.delete(readCookie(request, sessionCookie));
+      writeCookie(response, sessionCookie, '', 0, secure);
+      return json(response, 200, { authenticated: false });
+    }
+    // The reverse proxy's forwarded headers are deliberately not trusted.
+    const address = request.socket?.remoteAddress ?? 'local';
+    if (!consumeRate(`ip:${address}`, 30)) {
+      response.setHeader('Retry-After', String(RATE_SECONDS));
+      return json(response, 429, { error: 'Слишком много попыток. Попробуйте через 15 минут.' });
+    }
+    const email = normalizeEmail(body.email);
+    if (!email || !validPassword(body.password)) {
+      return json(response, 400, { error: 'Укажите корректную почту и пароль от 15 до 128 символов.' });
+    }
+    if (!consumeRate(`email:${email}`, 10)) {
+      response.setHeader('Retry-After', String(RATE_SECONDS));
+      return json(response, 429, { error: 'Слишком много попыток. Попробуйте через 15 минут.' });
+    }
+    const registering = path === '/api/auth/register';
+    if (registering && body.password !== body.confirmPassword) {
+      return json(response, 400, { error: 'Пароли не совпадают.' });
+    }
+    const account = await (registering ? accounts.register(email, body.password) : accounts.authenticate(email, body.password));
+    if (!account) return json(response, registering ? 409 : 401, {
+      error: registering ? 'Не удалось зарегистрировать эту почту. Попробуйте войти.' : 'Неверная почта или пароль.',
+    });
+    if (!issueSession(request, response, { account, provider: 'email' })) {
+      return json(response, 503, { error: 'Сервер занят. Попробуйте чуть позже.' });
+    }
+    return json(response, registering ? 201 : 200, { authenticated: true, account: { email: account.email } });
   }
 
   function startVk(request, response) {
@@ -149,13 +261,7 @@ export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fet
         return redirect(response, failed);
       }
 
-      pruneExpired();
-      sessions.delete(readCookie(request, sessionCookie));
-      if (sessions.size >= STORE_LIMIT) return redirect(response, failed);
-
-      const sessionId = randomId();
-      sessions.set(sessionId, { userId: token.user_id, expiresAt: now() + SESSION_SECONDS * 1000 });
-      writeCookie(response, sessionCookie, sessionId, SESSION_SECONDS, vk.secure);
+      if (!issueSession(request, response, { userId: token.user_id, provider: 'vk' })) return redirect(response, failed);
       return redirect(response, '/#login');
     } catch {
       return redirect(response, failed);
@@ -167,18 +273,23 @@ export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fet
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('X-Content-Type-Options', 'nosniff');
 
-    if (request.method !== 'GET') return response.writeHead(405, { Allow: 'GET' }).end();
-
     try {
       const url = new URL(request.url, 'http://site.invalid');
       if (url.origin !== 'http://site.invalid') return response.writeHead(400).end();
 
-      if (vk && request.headers.host?.toLowerCase() !== vk.host) {
-        const canonical = new URL(vk.origin);
+      if (origin && request.headers.host?.toLowerCase() !== origin.host) {
+        if (request.method !== 'GET') return json(response, 403, { error: 'Откройте основной адрес сайта.' });
+        const canonical = new URL(origin.origin);
         canonical.pathname = url.pathname;
         canonical.search = url.search;
         return redirect(response, canonical.href);
       }
+
+      if (POST_PATHS.has(url.pathname)) {
+        if (request.method !== 'POST') return response.writeHead(405, { Allow: 'POST' }).end();
+        return await passwordAction(request, response, url.pathname);
+      }
+      if (request.method !== 'GET') return response.writeHead(405, { Allow: 'GET' }).end();
 
       if (CALLBACK_PATHS.has(url.pathname)) {
         if (vk && url.pathname !== vk.callbackPath) return response.writeHead(404).end();
@@ -190,7 +301,10 @@ export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fet
           const session = sessions.get(readCookie(request, sessionCookie));
           const authenticated = Boolean(session && session.expiresAt > now());
           response.writeHead(200, { 'Content-Type': 'application/json' });
-          return response.end(JSON.stringify({ authenticated, providers: vk ? ['vk'] : [] }));
+          return response.end(JSON.stringify({
+            authenticated, providers: vk ? ['email', 'vk'] : ['email'],
+            ...(authenticated && session.account ? { account: { email: session.account.email } } : {}),
+          }));
         }
         case '/api/auth/vk/start':
           return startVk(request, response);
@@ -202,13 +316,16 @@ export function createSiteServer({ clientId, redirectUri } = {}, { fetchVk = fet
           return response.writeHead(200, { 'Content-Type': `${type}; charset=utf-8` }).end(body);
         }
       }
-    } catch {
-      return response.writeHead(500).end();
+    } catch (error) {
+      const status = [400, 413, 415, 503].includes(error.status) ? error.status : 500;
+      return json(response, status, { error: status === 500 ? 'Не удалось выполнить запрос. Попробуйте позже.' : error.message });
     }
   });
 
   const cleanup = setInterval(pruneExpired, 60000).unref();
-  server.once('close', () => clearInterval(cleanup));
+  server.once('close', () => { clearInterval(cleanup); accounts.close(); });
+  server.requestTimeout = 15000;
+  server.headersTimeout = 10000;
   return server;
 }
 
@@ -217,6 +334,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const site = createSiteServer({
     clientId: process.env.VK_CLIENT_ID,
     redirectUri: process.env.VK_REDIRECT_URI,
+    siteOrigin: process.env.SITE_ORIGIN,
+    accountFile: process.env.AUTH_DB_PATH || defaultAccountFile(),
   });
   site.listen(port, '127.0.0.1', () => {
     console.log(`Топиарий Сад: http://127.0.0.1:${site.address().port}/#login`);

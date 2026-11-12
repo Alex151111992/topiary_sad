@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCartUI(); // инициализация при загрузке
 
   // --- 4. Форма заявки (имитация отправки) ---
-  const form = document.querySelector('form');
+  const form = document.querySelector('#contacts form');
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();

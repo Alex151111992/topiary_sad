@@ -4,15 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Топиарный Сад — садовые топиарии на заказ</title>
-  
+
   <!-- Встроенные стили (чтобы сайт сразу выглядел красиво без style.css) -->
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth.css">
 </head>
 <body>
 
   <header>
-  <button data-login-provider="vk">Войти через VK</button>
-  <span id="login-status"></span>
     <div class="logo">Топиарий Сад</div>
     <div class="cart-widget">
       <span class="cart-count">0</span> шт. | <span class="cart-total">0 ₽</span>
@@ -24,21 +23,22 @@
         <li><a href="#catalog">Каталог</a></li>
         <li><a href="#about">О нас</a></li>
         <li><a href="#contacts">Контакты</a></li>
+        <li><a href="#login" id="login-nav">Войти</a></li>
       </ul>
     </nav>
   </header>
 
   <main>
-    
+
     <!-- ========================================== -->
     <!-- АДМИН-ПАНЕЛЬ (Скрыта, пока не включен режим) -->
     <!-- ========================================== -->
     <div id="edit-controls">
       <h3>🛠 Панель администратора</h3>
-      
+
       <!-- Кнопка для входа в режим редактирования главной страницы -->
       <button id="toggle-edit-btn" class="btn-admin-primary">Редактировать страницу</button>
-      
+
       <!-- Кнопка для добавления товаров -->
       <button id="toggle-catalog-edit-btn" class="btn-admin-primary" style="margin-left: 10px;">Добавить/редактировать товары</button>
 
@@ -46,10 +46,10 @@
       <div id="page-edit-form" style="display:none; margin-top: 1rem; padding: 1rem; border: 1px dashed #ccc; background: #fafafa;">
         <label>Заголовок главного экрана:</label>
         <input type="text" id="title-input" style="width: 100%; box-sizing: border-box;">
-        
+
         <label style="margin-top: 10px;">Описание:</label>
         <textarea id="intro-input" rows="3" style="width: 100%; box-sizing: border-box;"></textarea>
-        
+
         <div class="form-actions">
           <button id="save-page-btn">Сохранить</button>
           <button id="cancel-page-edit-btn">Отмена</button>
@@ -96,6 +96,55 @@
         <!-- Сюда JavaScript вставит карточки товаров -->
         <p style="grid-column: 1/-1; text-align:center; color:#777;">Загрузка каталога...</p>
       </div>
+    </section>
+
+    <section id="login" class="login" aria-labelledby="login-title">
+      <h2 id="login-title" class="section-title">Вход на сайт</h2>
+      <div id="login-choices" class="auth-content">
+        <p class="auth-intro">Войдите через VK или используйте почту и пароль.</p>
+        <div class="login-providers">
+          <button class="btn login-vk" type="button" data-login-provider="vk" disabled>Войти через VK ID</button>
+        </div>
+        <p id="vk-availability" class="auth-hint"></p>
+        <div class="auth-divider"><span>или по почте</span></div>
+        <div class="auth-switch" aria-label="Вход или регистрация">
+          <button type="button" id="choose-login" aria-pressed="true">Войти</button>
+          <button type="button" id="choose-register" aria-pressed="false">Зарегистрироваться</button>
+        </div>
+        <form id="email-login" class="auth-form" method="post" action="/api/auth/login">
+          <div class="form-group">
+            <label for="login-email">Электронная почта</label>
+            <input id="login-email" name="email" type="email" autocomplete="username" maxlength="254" required placeholder="name@example.ru" />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Пароль</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" maxlength="128" required />
+          </div>
+          <button class="btn" type="submit" disabled>Войти по почте</button>
+        </form>
+        <form id="email-register" class="auth-form" method="post" action="/api/auth/register" hidden>
+          <div class="form-group">
+            <label for="register-email">Электронная почта</label>
+            <input id="register-email" name="email" type="email" autocomplete="username" maxlength="254" required placeholder="name@example.ru" />
+          </div>
+          <div class="form-group">
+            <label for="register-password">Придумайте пароль</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="password-hint" required />
+            <p id="password-hint" class="auth-hint">От 15 до 128 символов. Можно использовать длинную фразу с пробелами.</p>
+          </div>
+          <div class="form-group">
+            <label for="register-confirm">Повторите пароль</label>
+            <input id="register-confirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="15" maxlength="128" required />
+          </div>
+          <button class="btn" type="submit" disabled>Создать аккаунт</button>
+        </form>
+      </div>
+      <div id="account-panel" class="auth-content" hidden>
+        <p id="account-label"></p>
+        <button id="logout-button" class="btn" type="button">Выйти из аккаунта</button>
+      </div>
+      <p id="login-status" role="status">Для входа требуется подключение к серверу сайта.</p>
+      <noscript>Для входа и регистрации включите JavaScript в браузере.</noscript>
     </section>
 
     <!-- Форма заявки -->

@@ -67,7 +67,7 @@ test('витрина доступна без настроек VK ID, а исхо
   assert.equal((await app.get('/auth.js')).status, 200);
   assert.equal((await app.get('/server.mjs')).status, 404);
   assert.equal((await app.get('/server.test.mjs')).status, 404);
-  assert.deepEqual(await (await app.get('/api/auth/session')).json(), { authenticated: false, providers: [] });
+  assert.deepEqual(await (await app.get('/api/auth/session')).json(), { authenticated: false, providers: ['email'] });
   const start = await app.get('/api/auth/vk/start');
   assert.equal(start.headers.get('location'), '/?login=unconfigured#login');
   assert.equal(start.headers.get('set-cookie'), null);
@@ -116,7 +116,7 @@ test('обмен кода VK ID создаёт отдельную сессию, 
   const sessionCookie = setCookie.split(';')[0];
   const session = await app.get('/api/auth/session', sessionCookie);
   assert.equal(session.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await session.json(), { authenticated: true, providers: ['vk'] });
+  assert.deepEqual(await session.json(), { authenticated: true, providers: ['email', 'vk'] });
   assert.equal((await (await app.get('/api/auth/session')).json()).authenticated, false);
   app.tick(3600000);
   assert.equal((await (await app.get('/api/auth/session', sessionCookie)).json()).authenticated, false);

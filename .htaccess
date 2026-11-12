@@ -1,4 +1,10 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteRule ^tests(?:/|$) - [F,L]
 RewriteRule ^api/auth/.*$ vk-auth.php [L,QSA]
+RewriteRule ^auth/vkid$ vk-auth.php [L,QSA]
 </IfModule>
+
+<FilesMatch "(?i)(^\.|\.(?:sqlite(?:-.*)?|db(?:-.*)?|mjs|log)$|^email-auth\.php$)">
+    Require all denied
+</FilesMatch>

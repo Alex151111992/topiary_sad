@@ -2,14 +2,21 @@
 declare(strict_types=1);
 
 const VK_CLIENT_ID    = '54889426';
-const VK_REDIRECT_URI = 'https://www.topiary-sad.ru/api/auth/vk/callback';
+define('VK_REDIRECT_URI', getenv('VK_REDIRECT_URI') ?: 'https://www.topiary-sad.ru/api/auth/vk/callback');
+define('SITE_ORIGIN', getenv('SITE_ORIGIN') ?: 'https://www.topiary-sad.ru');
 const VK_ORIGIN       = 'https://id.vk.ru';
 const ATTEMPT_SECONDS = 600;
 const SESSION_SECONDS = 3600;
-const ATTEMPT_COOKIE  = '__Host-topiary_vk_attempt';
-const SESSION_COOKIE  = '__Host-topiary_session';
-const SECURE          = true;   // сайт по HTTPS
-const VK_DEBUG        = true;   // после отладки поставить false
+define('SECURE', str_starts_with(SITE_ORIGIN, 'https://'));
+define('ATTEMPT_COOKIE', (SECURE ? '__Host-' : '') . 'topiary_vk_attempt');
+define('SESSION_COOKIE', (SECURE ? '__Host-' : '') . 'topiary_session');
+require_once __DIR__ . '/email-auth.php';
+$site = parse_url(SITE_ORIGIN);
+if (!$site || isset($site['user']) || isset($site['pass']) ||
+    isset($site['query']) || isset($site['fragment']) || isset($site['path']) ||
+    (!SECURE && !(($site['scheme'] ?? '') === 'http' && in_array($site['host'] ?? '', ['127.0.0.1', 'localhost', '[::1]'], true)))) {
+    emailJson(503, ['error' => 'Нужно настроить адрес сайта.']);
+}
 
 function nowMs(): int { return (int)(microtime(true) * 1000); }
 
@@ -18,8 +25,8 @@ function randomId(): string {
 }
 
 function storeDir(): string {
-    $dir = sys_get_temp_dir() . '/topiary-vk';
-    if (!is_dir($dir)) @mkdir($dir, 0700, true);
+    $dir = dirname(emailPrivateDir()) . '/sessions';
+    if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) throw new RuntimeException('Session directory unavailable');
     return $dir;
 }
 
@@ -38,7 +45,7 @@ function writeCookie(string $name, string $value, int $seconds): void {
 
 function readCookie(string $name): ?string {
     $raw = $_COOKIE[$name] ?? '';
-    return preg_match('/^[A-Za-z0-9_-]{43}$/', $raw) ? $raw : null;
+    return is_string($raw) && preg_match('/^[A-Za-z0-9_-]{43}$/', $raw) ? $raw : null;
 }
 
 function singleParam(string $key): ?string {
@@ -61,7 +68,9 @@ function attemptDelete(?string $id): void {
 }
 
 function sessionSet(string $id, array $data): void {
-    file_put_contents(storeDir() . '/s_' . hash('sha256', $id) . '.json', json_encode($data), LOCK_EX);
+    $path = storeDir() . '/s_' . hash('sha256', $id) . '.json';
+    if (file_put_contents($path, json_encode($data), LOCK_EX) === false) throw new RuntimeException('Session storage unavailable');
+    @chmod($path, 0600);
 }
 function sessionGet(?string $id): ?array {
     if (!$id) return null;
@@ -128,9 +137,6 @@ function finishVk(): never {
         'ignore_errors' => true,
     ]]);
     $body = @file_get_contents(VK_ORIGIN . '/oauth2/auth?' . $query, false, $context);
-    if (VK_DEBUG) {
-        file_put_contents(storeDir() . '/debug.log', date('c') . ' ' . substr((string)$body, 0, 2000) . "\n", FILE_APPEND);
-    }
     if ($body === false) redirect($failed);
 
     $token = json_decode($body, true);
@@ -153,6 +159,16 @@ function finishVk(): never {
 
 // --- Маршрутизация ---
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+try {
+    header('Cache-Control: no-store');
+    header('Referrer-Policy: no-referrer');
+    header('X-Content-Type-Options: nosniff');
+    $host = ($site['host'] ?? '') . (isset($site['port']) ? ':' . $site['port'] : '');
+    if (strtolower($_SERVER['HTTP_HOST'] ?? '') !== $host) {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') emailJson(403, ['error' => 'Откройте основной адрес сайта.']);
+        redirect(SITE_ORIGIN . '/#login');
+    }
+    if (in_array($path, ['/api/auth/register', '/api/auth/login', '/api/auth/logout'], true)) emailHandle($path);
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     header('Allow: GET');
@@ -161,26 +177,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 switch ($path) {
     case '/api/auth/session':
-        header('Content-Type: application/json; charset=utf-8');
-        header('Cache-Control: no-store');
-        echo json_encode([
-            'authenticated' => sessionGet(readCookie(SESSION_COOKIE)) !== null,
-            'providers' => ['vk'],
-        ], JSON_UNESCAPED_SLASHES);
-        exit;
+        $session = sessionGet(readCookie(SESSION_COOKIE));
+        $result = ['authenticated' => $session !== null, 'providers' => emailAvailable() ? ['email', 'vk'] : ['vk']];
+        if ($session && isset($session['account']['email'])) $result['account'] = ['email' => $session['account']['email']];
+        emailJson(200, $result);
 
     case '/api/auth/vk/start':
         startVk();
 
     case '/api/auth/vk/callback':
+    case '/auth/vkid':
+        if ($path !== parse_url(VK_REDIRECT_URI, PHP_URL_PATH)) { http_response_code(404); exit; }
         finishVk();
-
-    case '/api/auth/logout':
-        sessionDelete(readCookie(SESSION_COOKIE));
-        writeCookie(SESSION_COOKIE, '', 0);
-        redirect('/#login');
 
     default:
         http_response_code(404);
         exit;
+}
+} catch (Throwable $error) {
+    emailJson(503, ['error' => 'Вход временно недоступен. Попробуйте позже.']);
 }
