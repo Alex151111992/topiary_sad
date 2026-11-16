@@ -132,7 +132,15 @@ function exchangeToken(array $vk, string $code, string $deviceId, string $verifi
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 8,
-        CURLOPT_POSTFIELDS => '',
+        CURLOPT_POSTFIELDS => json_encode([
+        'grant_type'    => 'authorization_code',
+        'redirect_uri'  => $vk['redirectUri'],
+        'client_id'     => $vk['clientId'],
+        'code_verifier' => $verifier,
+        'state'         => $state,
+        'code'          => $code,
+        'device_id'     => $deviceId,
+    ]),
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
     ]);
     $body = curl_exec($ch);
