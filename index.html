@@ -31,33 +31,6 @@
   <main>
 
     <!-- ========================================== -->
-    <!-- АДМИН-ПАНЕЛЬ (Скрыта, пока не включен режим) -->
-    <!-- ========================================== -->
-    <div id="edit-controls">
-      <h3>🛠 Панель администратора</h3>
-
-      <!-- Кнопка для входа в режим редактирования главной страницы -->
-      <button id="toggle-edit-btn" class="btn-admin-primary">Редактировать страницу</button>
-
-      <!-- Кнопка для добавления товаров -->
-      <button id="toggle-catalog-edit-btn" class="btn-admin-primary" style="margin-left: 10px;">Добавить/редактировать товары</button>
-
-      <!-- Форма редактирования текста главной страницы (скрыта внутри) -->
-      <div id="page-edit-form" style="display:none; margin-top: 1rem; padding: 1rem; border: 1px dashed #ccc; background: #fafafa;">
-        <label>Заголовок главного экрана:</label>
-        <input type="text" id="title-input" style="width: 100%; box-sizing: border-box;">
-
-        <label style="margin-top: 10px;">Описание:</label>
-        <textarea id="intro-input" rows="3" style="width: 100%; box-sizing: border-box;"></textarea>
-
-        <div class="form-actions">
-          <button id="save-page-btn">Сохранить</button>
-          <button id="cancel-page-edit-btn">Отмена</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================== -->
     <!-- ГЛАВНЫЙ ЭКРАН (HOME) -->
     <!-- ========================================== -->
     <section id="home" class="hero">
@@ -141,6 +114,7 @@
       </div>
       <div id="account-panel" class="auth-content" hidden>
         <p id="account-label"></p>
+        <a id="admin-link" class="btn" href="/admin" hidden>Управление каталогом</a>
         <button id="logout-button" class="btn" type="button">Выйти из аккаунта</button>
       </div>
       <p id="login-status" role="status">Для входа требуется подключение к серверу сайта.</p>
@@ -172,32 +146,6 @@
     <p>&copy; 2026 Топиарий Сад. Все права защищены.</p>
     <p>Адрес: Нижегородская область, д. Малая Ельня, ул. Переулок полевой | Телефон: +7 (920) 013-23-88</p>
   </footer>
-
-  <!-- ========================================== -->
-  <!-- МОДАЛЬНОЕ ОКНО ДЛЯ РЕДАКТИРОВАНИЯ ТОВАРА -->
-  <!-- (Всплывающее окно, стили уже есть в <style>) -->
-  <!-- ========================================== -->
-  <div id="product-edit-form">
-    <h3 id="edit-form-title">Добавить товар</h3>
-    <input type="hidden" id="product-id">
-
-    <label>Название:</label>
-    <input type="text" id="product-name" required>
-
-    <label style="margin-top: 10px;">Описание:</label>
-    <textarea id="product-desc" rows="3"></textarea>
-
-    <label style="margin-top: 10px;">Цена (₽):</label>
-    <input type="number" id="product-price" required>
-
-    <label style="margin-top: 10px;">Фото (URL картинки):</label>
-    <input type="url" id="product-image" placeholder="https://...">
-
-    <div class="form-actions">
-      <button id="save-product-btn" class="btn-admin-primary">Сохранить</button>
-      <button id="cancel-product-edit-btn" class="btn-admin-secondary">Отмена</button>
-    </div>
-  </div>
 
   <!-- Плавная прокрутка для якорей -->
   <script>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Каталог — панель администратора Топиарий Сад</title>
+  <link rel="stylesheet" href="admin.css">
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <header class="admin-header"><a class="brand" href="/">Топиарий Сад</a><span>Панель администратора</span><a href="/#catalog">Посмотреть сайт ↗</a></header>
+  <main>
+    <div id="access-message" class="notice" role="status">Проверяем доступ…</div>
+    <div id="admin-workspace" hidden>
+      <div class="page-heading"><div><p class="eyebrow">Управление сайтом</p><h1>Изделия</h1><p>Добавляйте товары, обновляйте фотографии и выбирайте, что показывать в каталоге.</p></div><button id="new-product" class="primary" type="button">+ Добавить изделие</button></div>
+      <section class="panel" aria-labelledby="list-title">
+        <div class="section-heading"><h2 id="list-title">Каталог изделий</h2><span id="product-count"></span></div>
+        <div class="filters">
+          <label>Поиск<input id="product-search" type="search" placeholder="Название или описание" maxlength="120"></label>
+          <label>Категория<select id="filter-category"><option value="">Все категории</option></select></label>
+          <label>Публикация<select id="filter-status"><option value="">Все изделия</option><option value="published">Опубликовано</option><option value="draft">Черновики</option></select></label>
+          <button id="reset-filters" type="button" class="secondary">Сбросить</button>
+        </div>
+        <p id="list-status" role="status"></p>
+        <div class="table-wrap"><table><thead><tr><th>Изделие</th><th>Категория</th><th>Цена</th><th>Публикация</th><th><span class="sr-only">Действия</span></th></tr></thead><tbody id="product-list"></tbody></table></div>
+      </section>
+      <section id="editor" class="editor-layout" aria-labelledby="editor-title" hidden>
+        <div class="panel">
+          <div class="section-heading"><h2 id="editor-title">Новое изделие</h2><button id="close-editor" type="button" class="secondary">Закрыть</button></div>
+          <form id="product-form">
+            <input type="hidden" name="id"><input type="hidden" name="version">
+            <label>Название<input name="name" required maxlength="120" placeholder="Например, Топиар «Олень»"></label>
+            <label>Описание<textarea name="desc" maxlength="2000" rows="4" placeholder="Материал, размеры и особенности изделия"></textarea></label>
+            <div class="form-row"><label>Цена, ₽<input name="price" type="number" inputmode="decimal" min="0.01" max="9999999.99" step="0.01" required></label><label>Категория<input name="category" maxlength="60" required list="categories" placeholder="Например, Фигуры"><datalist id="categories"></datalist></label></div>
+            <label>Фотография<input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-hint"></label>
+            <p id="photo-hint" class="hint">JPEG, PNG или WebP до 4 МБ. Максимум 4096×4096 и 8 мегапикселей.</p>
+            <label class="checkbox"><input type="checkbox" name="removePhoto" value="1">Убрать сохранённое фото</label>
+            <label>Публикация<select name="published"><option value="1">Показать в каталоге</option><option value="0">Сохранить как черновик</option></select></label>
+            <p id="save-status" role="status" aria-live="polite"></p>
+            <div class="form-actions"><button type="submit" class="primary">Сохранить изделие</button><button type="button" id="cancel-edit" class="secondary">Отменить</button></div>
+          </form>
+        </div>
+        <aside class="preview-panel"><h2>Предпросмотр карточки</h2><p class="hint">Так изделие будет выглядеть в каталоге. Изменения появятся на сайте после сохранения.</p><article class="preview-card"><img id="preview-image" src="/assets/catalog-placeholder.svg" alt="Фотография изделия"><div class="preview-copy"><span id="preview-category" class="badge"></span><h3 id="preview-name">Название изделия</h3><p id="preview-description"></p><strong id="preview-price">0 ₽</strong></div></article><p id="preview-publication" class="hint"></p></aside>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

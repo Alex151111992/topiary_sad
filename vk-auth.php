@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const VK_CLIENT_ID    = '54889426';
+define('VK_CLIENT_ID', getenv('VK_CLIENT_ID') ?: '54889426');
 define('VK_REDIRECT_URI', getenv('VK_REDIRECT_URI') ?: 'https://www.topiary-sad.ru/api/auth/vk/callback');
 define('SITE_ORIGIN', getenv('SITE_ORIGIN') ?: 'https://www.topiary-sad.ru');
 const VK_ORIGIN       = 'https://id.vk.ru';
@@ -11,6 +11,7 @@ define('SECURE', str_starts_with(SITE_ORIGIN, 'https://'));
 define('ATTEMPT_COOKIE', (SECURE ? '__Host-' : '') . 'topiary_vk_attempt');
 define('SESSION_COOKIE', (SECURE ? '__Host-' : '') . 'topiary_session');
 require_once __DIR__ . '/email-auth.php';
+require_once __DIR__ . '/catalog.php';
 $site = parse_url(SITE_ORIGIN);
 if (!$site || isset($site['user']) || isset($site['pass']) ||
     isset($site['query']) || isset($site['fragment']) || isset($site['path']) ||
@@ -49,7 +50,12 @@ function readCookie(string $name): ?string {
 }
 
 function singleParam(string $key): ?string {
-    return isset($_GET[$key]) && is_string($_GET[$key]) && $_GET[$key] !== '' ? $_GET[$key] : null;
+    $values = [];
+    foreach (explode('&', $_SERVER['QUERY_STRING'] ?? '') as $pair) {
+        [$name, $value] = array_pad(explode('=', $pair, 2), 2, '');
+        if (urldecode($name) === $key) $values[] = urldecode($value);
+    }
+    return count($values) === 1 && $values[0] !== '' ? $values[0] : null;
 }
 
 function attemptSet(string $id, array $data): void {
@@ -169,6 +175,7 @@ try {
         redirect(SITE_ORIGIN . '/#login');
     }
     if (in_array($path, ['/api/auth/register', '/api/auth/login', '/api/auth/logout'], true)) emailHandle($path);
+    if ($path === '/api/catalog' || str_starts_with($path, '/api/admin/') || str_starts_with($path, '/media/')) catalogHandle($path);
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     header('Allow: GET');
@@ -180,6 +187,7 @@ switch ($path) {
         $session = sessionGet(readCookie(SESSION_COOKIE));
         $result = ['authenticated' => $session !== null, 'providers' => emailAvailable() ? ['email', 'vk'] : ['vk']];
         if ($session && isset($session['account']['email'])) $result['account'] = ['email' => $session['account']['email']];
+        if ($session) $result['admin'] = catalogIsAdmin($session);
         emailJson(200, $result);
 
     case '/api/auth/vk/start':

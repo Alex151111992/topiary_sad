@@ -40,6 +40,8 @@ function setBusy(value) {
 
 function showSession(session) {
   const authenticated = session.authenticated;
+  const adminLink = document.querySelector('#admin-link');
+  if (adminLink) adminLink.hidden = !authenticated || session.admin !== true;
   document.querySelector('#login-choices').hidden = authenticated;
   document.querySelector('#account-panel').hidden = !authenticated;
   document.querySelector('#login-title').textContent = authenticated ? 'Ваш аккаунт' : 'Вход на сайт';
@@ -88,6 +90,7 @@ async function refreshLogin(message) {
   } catch {
     if (requestId !== sessionRequest) return;
     providers = [];
+    showSession({ authenticated: false });
     status('Не удалось связаться с сервером. Обновите страницу и попробуйте снова.', true);
   } finally {
     if (requestId === sessionRequest) setBusy(false);

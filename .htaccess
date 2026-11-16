@@ -1,10 +1,13 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteRule ^tests(?:/|$) - [F,L]
+RewriteRule ^bin(?:/|$) - [F,L]
+RewriteRule ^admin/?$ admin.html [L]
+RewriteRule ^(?:api/catalog|api/admin/.*|media/.*)$ vk-auth.php [L,QSA]
 RewriteRule ^api/auth/.*$ vk-auth.php [L,QSA]
 RewriteRule ^auth/vkid$ vk-auth.php [L,QSA]
 </IfModule>
 
-<FilesMatch "(?i)(^\.|\.(?:sqlite(?:-.*)?|db(?:-.*)?|mjs|log)$|^email-auth\.php$)">
+<FilesMatch "(?i)(^\.|\.(?:sqlite(?:-.*)?|db(?:-.*)?|mjs|log|md)$|^(?:email-auth|catalog)\.php$)">
     Require all denied
 </FilesMatch>
