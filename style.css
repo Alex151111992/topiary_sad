@@ -23,11 +23,11 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: var(--text-dark);
   line-height: 1.6;
-  background-image: url('/image/get_preview_url (1).png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #0b2e26; /* запасной цвет, пока грузится градиент */
+  background-image: linear-gradient(135deg, #0b2e26 0%, #1d4d40 60%, #174238 100%);
   background-attachment: fixed;
+  background-repeat: no-repeat;
+  min-height: 100vh;
 }
 
 a {
