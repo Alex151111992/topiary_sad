@@ -1,0 +1,28 @@
+[1mdiff --git a/vk-auth.php b/vk-auth.php[m
+[1mindex 2627fc6..ea9cb36 100644[m
+[1m--- a/vk-auth.php[m
+[1m+++ b/vk-auth.php[m
+[36m@@ -132,12 +132,22 @@[m [mfunction exchangeToken(array $vk, string $code, string $deviceId, string $verifi[m
+         CURLOPT_POST => true,[m
+         CURLOPT_RETURNTRANSFER => true,[m
+         CURLOPT_TIMEOUT => 8,[m
+[31m-        CURLOPT_POSTFIELDS => '',[m
+[32m+[m[32m        CURLOPT_POSTFIELDS => json_encode([[m
+[32m+[m[32m        'grant_type'    => 'authorization_code',[m
+[32m+[m[32m        'redirect_uri'  => $vk['redirectUri'],[m
+[32m+[m[32m        'client_id'     => $vk['clientId'],[m
+[32m+[m[32m        'code_verifier' => $verifier,[m
+[32m+[m[32m        'state'         => $state,[m
+[32m+[m[32m        'code'          => $code,[m
+[32m+[m[32m        'device_id'     => $deviceId,[m
+[32m+[m[32m    ]),[m
+         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],[m
+     ]);[m
+     $body = curl_exec($ch);[m
+     $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);[m
+     curl_close($ch);[m
+[32m+[m[32m error_log("VK_EXCHANGE: HTTP " . $status . " body: " . $body, 3, "/tmp/vk-exchange.log");[m
+[32m+[m[32m    error_log("VK_EXCHANGE: HTTP " . $status . " body: " . $body, 3, "/tmp/vk-exchange.log");[m
+     if ($status !== 200 || !is_string($body)) throw new RuntimeException('token exchange failed');[m
+     $token = json_decode($body, true);[m
+     if (!is_array($token)) throw new RuntimeException('bad token payload');[m
