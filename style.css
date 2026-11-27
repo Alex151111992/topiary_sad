@@ -46,7 +46,7 @@ ul {
 /* 2. ШАПКА (HEADER) */
 /* ========================================== */
 header {
-  background: var(#0a360c);
+  background: var(--#0a360c);
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
